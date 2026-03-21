@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Media Stream Constraints Overrider
+// @name         Media Stream Constraints Overrider (Max Quality)
 // @namespace    http://tampermonkey.net/
-// @version      1.0
-// @description  Forces raw stereo audio and 1080p60 screen capture
+// @version      1.2
+// @description  Forces 1080p60 Screen Capture and Filterless Raw Audio
 // @author       Partner
 // @match        *://*/*
 // @grant        none
@@ -12,60 +12,89 @@
 (function() {
     'use strict';
 
-    // Helper to deep merge or override constraints
-    const modifyConstraints = (constraints, isDisplay = false) => {
-        if (!constraints) constraints = {};
+    // Brainstorming Logic: 
+    // 1. We use "ideal" for resolution to avoid hardware mismatch errors.
+    // 2. We use "exact: false" for filters to tell Chromium "DO NOT PROCESS THIS."
+    // 3. We include legacy 'goog' flags because Chrome's internal engine still references them.
 
-        // 1. Handle Audio Constraints (Specific to getUserMedia)
-        if (constraints.audio) {
-            const audioDefaults = {
-                echoCancellation: false,
-                noiseSuppression: false,
-                autoGainControl: false,
-                googAudioMirroring: true, // Specific for stereo/mirroring in Chromium
-                channelCount: 2
-            };
+    const RAW_AUDIO_CONSTRAINTS = {
+        echoCancellation: { daily: false, exact: false },
+        noiseSuppression: { daily: false, exact: false },
+        autoGainControl: { daily: false, exact: false },
+        channelCount: { ideal: 2 },
+        // Chromium Internal Overrides
+        googAudioMirroring: true,
+        googAutoGainControl: false,
+        googAutoGainControl2: false,
+        googEchoCancellation: false,
+        googHighpassFilter: false,
+        googNoiseSuppression: false,
+        googTypingNoiseDetection: false,
+        googNoiseReduction: false,
+        latency: 0,
+        sampleRate: 48000,
+        sampleSize: 16
+    };
 
-            if (typeof constraints.audio === 'boolean') {
-                constraints.audio = audioDefaults;
+    const HQ_VIDEO_CONSTRAINTS = {
+        width: { ideal: 1920, max: 1920 },
+        height: { ideal: 1080, max: 1080 },
+        frameRate: { ideal: 60, max: 60 },
+        aspectRatio: { ideal: 1.7777777778 }
+    };
+
+    const patchConstraints = (constraints, isDisplay) => {
+        const modified = JSON.parse(JSON.stringify(constraints || {}));
+
+        // Force Mic to be filterless
+        if (modified.audio) {
+            if (typeof modified.audio === 'boolean') {
+                modified.audio = RAW_AUDIO_CONSTRAINTS;
             } else {
-                Object.assign(constraints.audio, audioDefaults);
+                Object.assign(modified.audio, RAW_AUDIO_CONSTRAINTS);
             }
         }
 
-        // 2. Handle Video Constraints (Specific to getDisplayMedia)
+        // Force Screen/Video to 1080p60
         if (isDisplay) {
-            const videoDefaults = {
-                width: { ideal: 1920, max: 1920 },
-                height: { ideal: 1080, max: 1080 },
-                frameRate: { ideal: 60, max: 60 }
-            };
-
-            if (!constraints.video || typeof constraints.video === 'boolean') {
-                constraints.video = videoDefaults;
+            if (!modified.video || typeof modified.video === 'boolean') {
+                modified.video = HQ_VIDEO_CONSTRAINTS;
             } else {
-                Object.assign(constraints.video, videoDefaults);
+                Object.assign(modified.video, HQ_VIDEO_CONSTRAINTS);
             }
         }
 
-        return constraints;
+        return modified;
     };
 
-    // Override getUserMedia (Camera/Mic)
-    const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
-    navigator.mediaDevices.getUserMedia = async (constraints) => {
-        console.log('%c[MediaOverride] Modifying getUserMedia constraints...', 'color: #00ff00');
-        const newConstraints = modifyConstraints(constraints);
-        return originalGetUserMedia(newConstraints);
-    };
+    // --- EXECUTION ---
 
-    // Override getDisplayMedia (Screen Share)
-    const originalGetDisplayMedia = navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);
-    navigator.mediaDevices.getDisplayMedia = async (constraints) => {
-        console.log('%c[MediaOverride] Modifying getDisplayMedia constraints...', 'color: #00ff00');
-        const newConstraints = modifyConstraints(constraints, true);
-        return originalGetDisplayMedia(newConstraints);
-    };
+    if (navigator.mediaDevices) {
+        // Handle Screen Share (getDisplayMedia)
+        const originalGetDisplayMedia = navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);
+        navigator.mediaDevices.getDisplayMedia = async function(c) {
+            console.log('%c[MediaOverride] Forcing 1080p60 Screen Capture...', 'color: #00d4ff');
+            try {
+                return await originalGetDisplayMedia(patchConstraints(c, true));
+            } catch (e) {
+                console.warn('[MediaOverride] Max settings failed, falling back to default.', e);
+                return originalGetDisplayMedia(c);
+            }
+        };
 
-    console.log('Media Stream Overrider Active: Filters Disabled & 1080p60 Enabled.');
+        // Handle Mic/Cam (getUserMedia)
+        const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+        navigator.mediaDevices.getUserMedia = async function(c) {
+            console.log('%c[MediaOverride] Forcing Raw Filterless Audio...', 'color: #00ff00');
+            try {
+                return await originalGetUserMedia(patchConstraints(c, false));
+            } catch (e) {
+                console.warn('[MediaOverride] Filter removal failed, falling back to default.', e);
+                return originalGetUserMedia(c);
+            }
+        };
+    }
+
+    console.log('%c[MediaOverride] Partner Script Loaded. Targets: getDisplayMedia & getUserMedia.', 'background: #222; color: #bada55');
 })();
+
