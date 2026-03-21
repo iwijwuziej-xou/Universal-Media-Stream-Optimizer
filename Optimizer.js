@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      4.0
 // @description  Strictly patches getUserMedia and getDisplayMedia for raw, filterless, mirrored stereo.
-// @author       Gemini Coder
+// @author       Coder
 // @match        *://*/*
 // @grant        unsafeWindow
 // @run-at       document-start
