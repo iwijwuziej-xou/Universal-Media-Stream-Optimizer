@@ -1,6 +1,6 @@
 # Changelog
 
-## v16.1 — Hardened WebRTC Audio Engine Upgrade
+## v16.2 — Hardened WebRTC Audio Engine Upgrade
 **Release Date:** 2026-06-19
 
 ### Improvements
