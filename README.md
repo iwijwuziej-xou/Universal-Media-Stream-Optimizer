@@ -17,4 +17,4 @@
 ### Notes
 This update focuses entirely on internal engine stability, stealth, and compatibility.  
 No UI changes. No behavioral regressions.  
-All improvements are backward-compatible with v16.0.
+All improvements are backward-compatible with v16.2.
