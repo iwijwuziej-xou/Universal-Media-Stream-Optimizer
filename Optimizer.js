@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Microphone Optimizer
 // @namespace    http://tampermonkey.net/
-// @version      16.2
+// @version      16.3.0
 // @description  Global WebRTC/Opus optimizer: 48kHz, 384kbps CBR, 24-bit ideal, filters off, hardened patching.
 // @match        *://*/*
 // @grant        unsafeWindow
