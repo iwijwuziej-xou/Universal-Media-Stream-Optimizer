@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Universal Iron-Block v16.1
+// @name         Microphone Optimizer
 // @namespace    http://tampermonkey.net/
 // @version      16.1
 // @description  Global WebRTC/Opus optimizer: 48kHz, 384kbps CBR, 24-bit ideal, filters off, hardened patching.
